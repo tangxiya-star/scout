@@ -59,6 +59,7 @@ Scout is built on the hackathon **sponsor track**:
 
 - **Hexclave** — used for real. Auth (`@hexclave/next`, sign-up enabled) and one-click deploy to Vercel are wired through `frontend/hexclave.config.ts`, taking the prototype from hackathon build toward a hostable, production-ready product — and pointing at Hexclave's "make money during the hackathon" prize via a deployable path to paying farmers.
 - **NASA open data** — the environmental reasoning layer runs on **NASA POWER** (agroclimate: temperature, humidity, rainfall) alongside Open-Meteo, so disease-risk reasoning is grounded in real space/earth-observation data.
+- **VOYAGR** *(planned integration)* — VOYAGR's real-world action layer closes Scout's loop into the field: once Scout localizes a treatment zone and flags that expert review is needed, VOYAGR can call a local agronomist or spraying service, request a quote, and book the treatment — turning a reasoning output into a real-world booking. Not yet wired in code; it's the natural next step past the recommendation.
 - **Customer discovery** — sponsor-track intros are the channel for reaching US farmers who already fly drones (Riyan's discovery work).
 
 ---
