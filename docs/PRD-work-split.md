@@ -16,9 +16,11 @@ Constraint: short hackathon build window (~5 hours of core build time). Everythi
 | Product scope, demo narrative, pitch | **Holly** |
 | Frontend (Next.js cockpit, video, map, reasoning panel) | **Holly** |
 | Backend (FastAPI, WebSocket, mission state) | **Holly** |
+| Environmental data integration — **NASA APIs** + weather | **Holly** (builds); **Riyan** advises which datasets matter |
 | Computer vision (detection/overlays, second-inspection) | **Holly** |
 | AI reasoning engine + mission planner | **Holly** (uses Riyan's knowledge base) |
-| Disease profile, indicators, treatment logic | **Riyan** |
+| `disease_profile.json` structure | **Holly** (drafts); **Riyan** fills in + validates science |
+| Disease indicators, treatment logic | **Riyan** |
 | Scientific validation of AI output | **Riyan** |
 | Customer discovery — find real farmers | **Riyan** |
 | Sponsor-track outreach / "sell during hackathon" | **Riyan** (Holly supports) |
@@ -47,7 +49,13 @@ The single shared contract between the two halves is the **disease-profile JSON*
 ### 2.3 Backend & AI
 - FastAPI + WebSocket to stream mission events to the frontend.
 - Frame sampling / preprocessing pipeline.
-- Environmental context: real API where cheap (Open-Meteo) + cached fallback object.
+- **Environmental data layer — NASA-first:**
+  - **NASA POWER** — temperature, humidity, rainfall, solar radiation, wind (historical + agroclimate context).
+  - **NASA SMAP / Crop-CASMA** — surface & root-zone soil moisture (regional context, not plant-level).
+  - **Sentinel Hub** — NDVI / NDMI vegetation & crop-stress layers for the field map.
+  - **Open-Meteo** — low-latency *current* conditions to complement NASA's slower/historical data.
+  - Riyan advises *which* NASA fields actually move disease risk so we don't pull noise.
+- **Demo-reliability rule:** NASA APIs can be slow/rate-limited — pre-fetch and **cache** the demo field's values, and keep a **hardcoded fallback object** so the live demo never blocks on a NASA call.
 - **AI reasoning engine**: structured JSON output (assessment / mission_decision / treatment_status), fed by Riyan's disease profile.
 - Mission-planner state machine: `CONTINUE_ROUTE → FLY_CLOSER → INSPECT_ADJACENT_ROW → COMPLETE_MISSION` (deterministic for demo).
 - Confidence-update / verification loop (64% → 92%).
@@ -81,10 +89,12 @@ Two hats: (A) make Scout's recommendations scientifically credible, and (B) find
 - Common **lookalikes** (nutrient deficiency, water stress, dust/residue) and how to tell them apart.
 - Rules for: when closer imagery is required, when monitoring is enough, when treatment may be justified.
 - Low-pesticide / biological alternatives + when spraying should be avoided.
+- **Advise on NASA data:** tell Holly which **NASA POWER** fields (humidity, rainfall, temp, leaf-wetness proxy) and which **SMAP / Crop-CASMA** soil-moisture / **Sentinel Hub** NDVI-NDMI signals actually correlate with the chosen disease's risk — so the environmental layer pulls signal, not noise.
 - 2–3 credible sources cited (extension bulletins, university ag guides).
 
 ### 3.2 Knowledge base — the deliverable that plugs into the code
-- Produce the **disease-profile JSON** (schema in §4). This is Holly's reasoning-engine input.
+- **Holly** drafts the `disease_profile.json` structure (schema in §4) so it matches what the reasoning engine expects.
+- **Riyan** fills in the scientific content (indicator names, importance rankings, lookalikes, sources) and validates it is correct.
 - Draft the treatment decision tree (monitor / inspect / non-chemical / localized zone / agronomist review).
 
 ### 3.3 Scientific validation
@@ -113,7 +123,7 @@ The event rewards teams that find real users and even sell during the hackathon 
 
 ### Riyan — Definition of done
 - [ ] Disease + top 5 visual + top 5 environmental indicators chosen and ranked
-- [ ] `disease_profile.json` delivered to Holly (valid, matches §4 schema)
+- [ ] Scientific content filled into Holly's `disease_profile.json` draft and validated (matches §4 schema)
 - [ ] Treatment decision tree written
 - [ ] AI output reviewed and signed off as plausible
 - [ ] ≥ 2 discovery conversations with US growers/operators who **already fly drones**, with at least one usable quote or demand signal
@@ -123,7 +133,7 @@ The event rewards teams that find real users and even sell during the hackathon 
 
 ## 4. The shared contract — `disease_profile.json`
 
-Riyan owns this file; Holly's reasoning engine reads it. Keep it committed at `data/disease_profile.json`.
+**Holly** drafts the structure (so it matches the reasoning engine); **Riyan** fills in and validates the scientific content. Keep it committed at `data/disease_profile.json`.
 
 ```json
 {
@@ -157,8 +167,8 @@ Rule: if the schema changes, whoever changes it pings the other before committin
 
 | Block | Holly | Riyan |
 |---|---|---|
-| Hour 0–1 | Scaffold Next.js + FastAPI, lock scope | Pick disease, draft indicators |
-| Hour 1–2 | Video player + detection overlay | Deliver `disease_profile.json` v1 |
+| Hour 0–1 | Scaffold Next.js + FastAPI, lock scope; wire + cache NASA POWER/SMAP + Sentinel Hub for the demo field | Pick disease, draft indicators, flag which NASA fields matter |
+| Hour 1–2 | Video player + detection overlay; draft `disease_profile.json` structure | Fill in science into the profile draft |
 | Hour 2–3 | Reasoning engine + mission planner (consuming profile) | Start farmer/customer discovery via sponsor track |
 | Hour 3–4 | Verification loop + field map + treatment zone | Validate AI output; capture demand signal |
 | Hour 4–5 | Mission-complete screen + demo polish | Prep science + traction pitch section |
@@ -169,7 +179,10 @@ Rule: if the schema changes, whoever changes it pings the other before committin
 ## 6. Interfaces & handoffs
 
 ```
-Riyan: disease_profile.json + treatment decision tree
+Holly: drafts disease_profile.json structure
+   │
+   ▼
+Riyan: fills in science + treatment decision tree, validates
    │  (committed to data/)
    ▼
 Holly: reasoning engine + mission planner  →  cockpit UI  →  demo
