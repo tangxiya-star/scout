@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { AnimatePresence, motion } from "framer-motion";
 import { useMissionDemo } from "@/lib/useMissionDemo";
 import { useLiveMission } from "@/lib/liveMission";
@@ -14,10 +15,14 @@ import MissionComplete from "@/components/MissionComplete";
 import DemoControls from "@/components/DemoControls";
 import SourceToggle from "@/components/SourceToggle";
 
+// MapLibre touches `window` at import time — client-only.
+const GlobeView = dynamic(() => import("@/components/GlobeView"), { ssr: false });
+
 export default function Home() {
   const demo = useMissionDemo();
   const live = useLiveMission();
   const [mode, setMode] = useState<"local" | "live">("local");
+  const [stage, setStage] = useState<"globe" | "cockpit">("globe");
 
   // Auto-fall back to LOCAL if the backend errors mid-demo (reliability guardrail).
   useEffect(() => {
@@ -39,6 +44,14 @@ export default function Home() {
     setMode("local");
     live.disconnect();
   };
+
+  if (stage === "globe") {
+    return (
+      <div className="h-dvh">
+        <GlobeView onEnterMission={() => setStage("cockpit")} />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-dvh flex-col">
@@ -68,6 +81,14 @@ export default function Home() {
         <div className="absolute right-3 top-2 z-50">
           <SourceToggle mode={mode} onLocal={startLocal} onLive={startLive} live={live} />
         </div>
+
+        {/* back to the globe entry screen */}
+        <button
+          onClick={() => setStage("globe")}
+          className="absolute bottom-2 right-3 z-50 cursor-pointer rounded-sm border border-hud-border bg-black/50 px-2.5 py-1 font-mono text-[10px] tracking-widest text-hud-dim hover:text-hud-text"
+        >
+          ◐ GLOBE
+        </button>
 
         {/* presenter controls — local mode only (backend owns live timing) */}
         {!complete && mode === "local" && (

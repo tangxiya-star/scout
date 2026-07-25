@@ -111,6 +111,52 @@ body {
   background-size: 28px 28px;
 }
 
+/* ---- Globe entry screen ---- */
+
+.pilot-marker {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+.pilot-core {
+  position: absolute;
+  inset: 4px;
+  border-radius: 9999px;
+  background: var(--color-hud-green);
+  box-shadow: 0 0 10px 2px rgba(52, 211, 153, 0.8);
+}
+.pilot-ring {
+  position: absolute;
+  inset: -6px;
+  border-radius: 9999px;
+  border: 1.5px solid rgba(52, 211, 153, 0.7);
+  animation: pilot-pulse 1.8s ease-out infinite;
+}
+@keyframes pilot-pulse {
+  0% { transform: scale(0.5); opacity: 1; }
+  100% { transform: scale(1.7); opacity: 0; }
+}
+.pilot-label {
+  position: absolute;
+  top: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: var(--color-hud-green);
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.9);
+}
+
+/* MapLibre chrome, muted to match the HUD */
+.maplibregl-ctrl-attrib {
+  background: rgba(0, 0, 0, 0.4) !important;
+  font-size: 9px;
+}
+.maplibregl-ctrl-attrib a { color: var(--color-hud-dim) !important; }
+
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-thumb { background: var(--color-hud-border); border-radius: 3px; }
 ::-webkit-scrollbar-track { background: transparent; }
