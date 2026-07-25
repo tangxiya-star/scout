@@ -17,12 +17,13 @@ import SourceToggle from "@/components/SourceToggle";
 
 // MapLibre touches `window` at import time — client-only.
 const GlobeView = dynamic(() => import("@/components/GlobeView"), { ssr: false });
+const PilotMode = dynamic(() => import("@/components/PilotMode"), { ssr: false });
 
 export default function Home() {
   const demo = useMissionDemo();
   const live = useLiveMission();
   const [mode, setMode] = useState<"local" | "live">("local");
-  const [stage, setStage] = useState<"globe" | "cockpit">("globe");
+  const [stage, setStage] = useState<"globe" | "cockpit" | "pilot">("globe");
 
   // Auto-fall back to LOCAL if the backend errors mid-demo (reliability guardrail).
   useEffect(() => {
@@ -49,6 +50,14 @@ export default function Home() {
     return (
       <div className="h-dvh">
         <GlobeView onEnterMission={() => setStage("cockpit")} />
+      </div>
+    );
+  }
+
+  if (stage === "pilot") {
+    return (
+      <div className="h-dvh">
+        <PilotMode onExit={() => setStage("cockpit")} />
       </div>
     );
   }
@@ -127,6 +136,12 @@ export default function Home() {
                   ▶ START MISSION
                 </button>
                 <button
+                  onClick={() => setStage("pilot")}
+                  className="cursor-pointer rounded-sm border border-hud-cyan/50 bg-hud-cyan/10 px-5 py-2 font-mono text-sm font-bold tracking-widest text-hud-cyan transition-colors hover:bg-hud-cyan/20"
+                >
+                  🎮 PILOT MODE
+                </button>
+                <button
                   onClick={startLive}
                   className="cursor-pointer rounded-sm border border-hud-border px-5 py-2 font-mono text-sm tracking-widest text-hud-dim transition-colors hover:text-hud-text"
                 >
@@ -134,7 +149,7 @@ export default function Home() {
                 </button>
               </div>
               <span className="font-mono text-[10px] text-hud-dim">
-                {MISSION_PHASES.length} phases · deterministic 3-min demo
+                Auto: {MISSION_PHASES.length}-phase deterministic demo · Pilot: fly it yourself (WASD)
               </span>
             </motion.div>
           )}
