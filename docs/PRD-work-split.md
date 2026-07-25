@@ -16,6 +16,7 @@ Constraint: short hackathon build window (~5 hours of core build time). Everythi
 | Product scope, demo narrative, pitch | **Holly** |
 | Frontend (Next.js cockpit, video, map, reasoning panel) | **Holly** |
 | Backend (FastAPI, WebSocket, mission state) | **Holly** |
+| Environmental data integration — **NASA APIs** + weather | **Holly** (builds); **Riyan** advises which datasets matter |
 | Computer vision (detection/overlays, second-inspection) | **Holly** |
 | AI reasoning engine + mission planner | **Holly** (uses Riyan's knowledge base) |
 | `disease_profile.json` structure | **Holly** (drafts); **Riyan** fills in + validates science |
@@ -48,7 +49,13 @@ The single shared contract between the two halves is the **disease-profile JSON*
 ### 2.3 Backend & AI
 - FastAPI + WebSocket to stream mission events to the frontend.
 - Frame sampling / preprocessing pipeline.
-- Environmental context: real API where cheap (Open-Meteo) + cached fallback object.
+- **Environmental data layer — NASA-first:**
+  - **NASA POWER** — temperature, humidity, rainfall, solar radiation, wind (historical + agroclimate context).
+  - **NASA SMAP / Crop-CASMA** — surface & root-zone soil moisture (regional context, not plant-level).
+  - **Sentinel Hub** — NDVI / NDMI vegetation & crop-stress layers for the field map.
+  - **Open-Meteo** — low-latency *current* conditions to complement NASA's slower/historical data.
+  - Riyan advises *which* NASA fields actually move disease risk so we don't pull noise.
+- **Demo-reliability rule:** NASA APIs can be slow/rate-limited — pre-fetch and **cache** the demo field's values, and keep a **hardcoded fallback object** so the live demo never blocks on a NASA call.
 - **AI reasoning engine**: structured JSON output (assessment / mission_decision / treatment_status), fed by Riyan's disease profile.
 - Mission-planner state machine: `CONTINUE_ROUTE → FLY_CLOSER → INSPECT_ADJACENT_ROW → COMPLETE_MISSION` (deterministic for demo).
 - Confidence-update / verification loop (64% → 92%).
@@ -82,6 +89,7 @@ Two hats: (A) make Scout's recommendations scientifically credible, and (B) find
 - Common **lookalikes** (nutrient deficiency, water stress, dust/residue) and how to tell them apart.
 - Rules for: when closer imagery is required, when monitoring is enough, when treatment may be justified.
 - Low-pesticide / biological alternatives + when spraying should be avoided.
+- **Advise on NASA data:** tell Holly which **NASA POWER** fields (humidity, rainfall, temp, leaf-wetness proxy) and which **SMAP / Crop-CASMA** soil-moisture / **Sentinel Hub** NDVI-NDMI signals actually correlate with the chosen disease's risk — so the environmental layer pulls signal, not noise.
 - 2–3 credible sources cited (extension bulletins, university ag guides).
 
 ### 3.2 Knowledge base — the deliverable that plugs into the code
@@ -159,7 +167,7 @@ Rule: if the schema changes, whoever changes it pings the other before committin
 
 | Block | Holly | Riyan |
 |---|---|---|
-| Hour 0–1 | Scaffold Next.js + FastAPI, lock scope | Pick disease, draft indicators |
+| Hour 0–1 | Scaffold Next.js + FastAPI, lock scope; wire + cache NASA POWER/SMAP + Sentinel Hub for the demo field | Pick disease, draft indicators, flag which NASA fields matter |
 | Hour 1–2 | Video player + detection overlay; draft `disease_profile.json` structure | Fill in science into the profile draft |
 | Hour 2–3 | Reasoning engine + mission planner (consuming profile) | Start farmer/customer discovery via sponsor track |
 | Hour 3–4 | Verification loop + field map + treatment zone | Validate AI output; capture demand signal |
