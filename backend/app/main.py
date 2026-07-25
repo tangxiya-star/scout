@@ -86,7 +86,7 @@ def _build_reasoning_input(env: dict, ri: dict) -> ReasoningInput:
             confidence=ri["confidence"],
             affected_area_percentage=ri["affected_area_percentage"],
             multiple_plants_detected=ri["multiple_plants_detected"],
-            image_filename=ri.get("image_filename"),
+            image_filenames=ri.get("image_filenames", []),
         ),
         environment=Environment(
             temperature_celsius=env["temperature_celsius"],

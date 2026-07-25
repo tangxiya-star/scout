@@ -118,7 +118,7 @@ MISSION_PHASES: list[dict[str, Any]] = [
             "current_row": 12,
             "previous_inspections": 1,
             # Drone has descended to leaf level — real photo now drives vision.
-            "image_filename": "downy-mildew-leaf.jpg",
+            "image_filenames": ["downy-mildew-leaf.jpg"],
         },
         "scripted_decision": {
             "action": "LOWER_ALTITUDE",
@@ -152,8 +152,10 @@ MISSION_PHASES: list[dict[str, Any]] = [
             "altitude_meters": 13,
             "current_row": 12,
             "previous_inspections": 2,
-            # Close-range macro of the leaf underside — the verification frame.
-            "image_filename": "downy-mildew-macro.jpg",
+            # Verification frame: BOTH views of the same leaf — upper-surface
+            # oil-spot + underside white sporulation. Together these are the
+            # diagnostic pairing for downy mildew, so the vision call is stable.
+            "image_filenames": ["downy-mildew-leaf.jpg", "downy-mildew-macro.jpg"],
         },
         "scripted_decision": {
             "action": "INSPECT_ADJACENT_ROW",
@@ -186,7 +188,7 @@ MISSION_PHASES: list[dict[str, Any]] = [
             "altitude_meters": 13,
             "current_row": 12,
             "previous_inspections": 3,
-            "image_filename": "downy-mildew-macro.jpg",
+            "image_filenames": ["downy-mildew-leaf.jpg", "downy-mildew-macro.jpg"],
         },
         # Finale: propose a localized zone + human review (never autonomous
         # treatment). REQUEST_HUMAN_REVIEW is what unlocks the treatment-zone

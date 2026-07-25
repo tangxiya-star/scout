@@ -33,14 +33,11 @@ _DISEASE_IMAGE_DIR = (
 )
 
 
-def _load_image_block(filename: str | None) -> dict[str, Any] | None:
-    """Read a disease photo and wrap it as an Anthropic image content block.
+def _load_image_block(filename: str) -> dict[str, Any] | None:
+    """Read one disease photo and wrap it as an Anthropic image content block.
 
-    Returns None if there's no filename or the file can't be read — the caller
-    then falls back to a text-only, detector-numbers assessment.
+    Returns None if the file can't be read.
     """
-    if not filename:
-        return None
     path = _DISEASE_IMAGE_DIR / filename
     try:
         raw = path.read_bytes()
@@ -55,6 +52,16 @@ def _load_image_block(filename: str | None) -> dict[str, Any] | None:
             "data": base64.standard_b64encode(raw).decode("ascii"),
         },
     }
+
+
+def _load_image_blocks(filenames: list[str]) -> list[dict[str, Any]]:
+    """Load every readable disease photo into image content blocks (order kept)."""
+    blocks = []
+    for name in filenames:
+        blk = _load_image_block(name)
+        if blk is not None:
+            blocks.append(blk)
+    return blocks
 
 
 def _load_disease_profile() -> dict[str, Any]:
@@ -244,21 +251,31 @@ async def run_reasoning(inp: ReasoningInput) -> ReasoningOutput:
             "disease_profile": profile,
         }
 
-        image_block = _load_image_block(inp.visual_observation.image_filename)
-        if image_block is not None:
+        image_blocks = _load_image_blocks(inp.visual_observation.image_filenames)
+        if image_blocks:
             instruction = (
-                "A real close-range leaf photo captured by the drone is "
-                "attached. Assess the crop condition from what you actually see "
-                "in the image, then return the tool output. The numeric fields "
-                "below are a preliminary onboard-detector signal to verify.\n"
+                f"{len(image_blocks)} real close-range frame(s) of the SAME "
+                "affected leaf/plant, captured by the drone, are attached above "
+                "(different views/zoom of the same site). Cross-reference them — "
+                "a diagnostic symptom visible in only one frame (e.g. an "
+                "upper-surface oil-spot in one view, white underside sporulation "
+                "in another) still counts as evidence, and the combination is "
+                "often what distinguishes lookalike diseases. Assess the crop "
+                "condition from what you actually see across these frames, then "
+                "return the tool output. The numeric fields below are a "
+                "preliminary onboard-detector signal to verify against the "
+                "pixels, not ground truth.\n"
             )
         else:
             instruction = "Assess this mission frame and return the tool output.\n"
 
-        # Image first, then the text payload (image-before-text reads best).
+        # Images first, each preceded by a neutral frame label, then the text
+        # payload (image-before-text reads best; labels help the model keep the
+        # frames distinct without being told which surface each one shows).
         content: list[dict[str, Any]] = []
-        if image_block is not None:
-            content.append(image_block)
+        for i, blk in enumerate(image_blocks, 1):
+            content.append({"type": "text", "text": f"Frame {i}:"})
+            content.append(blk)
         content.append(
             {"type": "text", "text": instruction + json.dumps(user_payload, indent=2)}
         )
