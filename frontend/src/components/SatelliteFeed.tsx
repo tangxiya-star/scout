@@ -45,8 +45,11 @@ export default function SatelliteFeed({
       map = new maplibregl.Map({
         container: ref.current,
         center: [PILOT_FARM.lng, PILOT_FARM.lat],
-        zoom: 17.1,
+        zoom: 17.4,
         bearing: -18,
+        // Oblique tilt: rows recede toward a horizon like a real drone camera
+        // looking ahead, not a flat top-down texture map.
+        pitch: 52,
         interactive: false,
         attributionControl: { compact: true, customAttribution: "Imagery © Esri · Maxar" },
         style: {
@@ -84,12 +87,14 @@ export default function SatelliteFeed({
     if (!map) return;
 
     if (closer) {
-      map.easeTo({ center: [ANOMALY.lng, ANOMALY.lat], zoom: 18.65, duration: 2600 });
+      // Descend toward the anomaly row — steeper tilt sells the FPV dive while
+      // staying near native imagery resolution (no upscale blur).
+      map.easeTo({ center: [ANOMALY.lng, ANOMALY.lat], zoom: 18.2, pitch: 62, duration: 2600 });
       return;
     }
 
     // Wide scanning pass: slow serpentine drift across the block.
-    map.easeTo({ center: [PILOT_FARM.lng, PILOT_FARM.lat], zoom: 17.1, duration: 1500 });
+    map.easeTo({ center: [PILOT_FARM.lng, PILOT_FARM.lat], zoom: 17.4, pitch: 52, duration: 1500 });
     let dir = 1;
     const drift = () => {
       const c = map.getCenter();
