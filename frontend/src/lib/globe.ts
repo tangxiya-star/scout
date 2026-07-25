@@ -103,13 +103,17 @@ export const VINEYARD_HUBS: GeoJSON.FeatureCollection<GeoJSON.Point, RegionProps
   ],
 };
 
-/** The one Scout-enabled site. Clicking it flies in and opens the mission cockpit. */
+/**
+ * The one Scout-enabled site. Clicking it flies in and opens the mission cockpit.
+ * Coordinates point at a real vineyard block in Carneros / Napa — the same spot
+ * the cockpit's satellite feed renders, so the globe fly-in lands seamlessly.
+ */
 export const PILOT_FARM = {
   id: "napa-pilot",
   name: "Napa Valley Pilot Vineyard",
   country: "United States",
   crops: "Grapevine (Cabernet Sauvignon)",
   note: "Scout-enabled · live drone + reasoning engine",
-  lng: -122.36,
-  lat: 38.42,
+  lng: -122.4103,
+  lat: 38.4269,
 };

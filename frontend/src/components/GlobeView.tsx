@@ -58,6 +58,14 @@ export default function GlobeView({ onEnterMission }: { onEnterMission: () => vo
               tileSize: 256,
               maxzoom: 8,
             },
+            esri: {
+              type: "raster",
+              tiles: [
+                "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+              ],
+              tileSize: 256,
+              maxzoom: 19,
+            },
             "grain-belts": { type: "geojson", data: GRAIN_BELTS },
             vineyards: { type: "geojson", data: VINEYARD_HUBS },
           },
@@ -71,6 +79,15 @@ export default function GlobeView({ onEnterMission }: { onEnterMission: () => vo
               paint: { "fill-color": "#10231a" },
             },
             { id: "gibs", type: "raster", source: "gibs", paint: { "raster-opacity": 0.92 } },
+            // High-res imagery takes over past z8 (GIBS Blue Marble tops out there),
+            // so the pilot-farm fly-in stays sharp all the way down to vine rows.
+            {
+              id: "esri-highres",
+              type: "raster",
+              source: "esri",
+              minzoom: 8,
+              paint: { "raster-fade-duration": 300 },
+            },
             {
               id: "borders",
               type: "line",
@@ -197,7 +214,8 @@ export default function GlobeView({ onEnterMission }: { onEnterMission: () => vo
     spinRef.current = false;
     setSelected(null);
     setEntering(true);
-    map.flyTo({ center: [PILOT_FARM.lng, PILOT_FARM.lat], zoom: 9.4, duration: 3200, essential: true });
+    // Dive all the way to the real vineyard block (Esri imagery keeps it sharp).
+    map.flyTo({ center: [PILOT_FARM.lng, PILOT_FARM.lat], zoom: 16, duration: 4200, essential: true });
     map.once("moveend", onEnterMission);
   };
 
@@ -304,7 +322,7 @@ export default function GlobeView({ onEnterMission }: { onEnterMission: () => vo
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 2.2, duration: 1 }}
+            transition={{ delay: 3.2, duration: 1 }}
             className="pointer-events-none absolute inset-0 z-20 bg-black"
           >
             <div className="flex h-full items-center justify-center">

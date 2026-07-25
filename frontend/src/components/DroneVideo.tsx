@@ -1,14 +1,17 @@
 "use client";
 
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MissionPhase } from "@/lib/mission";
+import SatelliteFeed from "@/components/SatelliteFeed";
 
 /**
  * Drone video area.
  *
- * Until real footage is dropped in (pass `videoSrc`), renders a stylized
- * top-down vineyard so the whole flow can be demoed today. The detection
- * overlay works identically on either background.
+ * Default feed is real satellite imagery of the pilot vineyard (SatelliteFeed);
+ * if tiles can't load (offline venue) it falls back to the stylized sim, and
+ * `videoSrc` still swaps in real drone footage if we ever get some. The
+ * detection overlay works identically on every background.
  */
 export default function DroneVideo({
   phase,
@@ -19,6 +22,7 @@ export default function DroneVideo({
 }) {
   const closer = phase.videoMode === "closer";
   const det = phase.detection;
+  const [satFailed, setSatFailed] = useState(false);
 
   return (
     <div className="video-fx relative h-full w-full overflow-hidden bg-black">
@@ -32,6 +36,8 @@ export default function DroneVideo({
           playsInline
           className="absolute inset-0 h-full w-full object-cover"
         />
+      ) : !satFailed ? (
+        <SatelliteFeed closer={closer} onError={() => setSatFailed(true)} />
       ) : (
         <motion.div
           className="absolute inset-0"
