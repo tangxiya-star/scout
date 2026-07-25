@@ -1,0 +1,116 @@
+@import "tailwindcss";
+
+@theme {
+  /* Scout cockpit palette */
+  --color-hud-bg: #07100c;
+  --color-hud-panel: #0b1712;
+  --color-hud-panel2: #0e1d16;
+  --color-hud-border: #1d3328;
+  --color-hud-text: #d7e6dc;
+  --color-hud-dim: #7b9486;
+  --color-hud-green: #34d399;
+  --color-hud-amber: #fbbf24;
+  --color-hud-red: #f87171;
+  --color-hud-cyan: #67e8f9;
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+html,
+body {
+  height: 100%;
+  background: var(--color-hud-bg);
+  color: var(--color-hud-text);
+  overflow: hidden;
+}
+
+/* ---- HUD chrome ---- */
+
+.panel {
+  background: var(--color-hud-panel);
+  border: 1px solid var(--color-hud-border);
+}
+
+.hud-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-hud-dim);
+}
+
+/* Blinking LIVE dot */
+@keyframes blink {
+  0%, 60% { opacity: 1; }
+  61%, 100% { opacity: 0.15; }
+}
+.live-dot {
+  animation: blink 1.4s steps(1) infinite;
+}
+
+/* Video scanline + vignette to sell "drone feed" */
+.video-fx::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.025) 0px,
+      rgba(255, 255, 255, 0.025) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+  z-index: 20;
+}
+.video-fx::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.5) 100%);
+  z-index: 21;
+}
+
+/* Detection box glow */
+@keyframes pulse-border {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.45); }
+  50% { box-shadow: 0 0 22px 4px rgba(251, 191, 36, 0.25); }
+}
+.detect-box {
+  animation: pulse-border 1.6s ease-in-out infinite;
+}
+
+/* Reasoning typing caret */
+@keyframes caret {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+.type-caret::after {
+  content: "▍";
+  animation: caret 0.9s steps(1) infinite;
+  color: var(--color-hud-green);
+}
+
+/* Flight path dash animation */
+@keyframes dash-move {
+  to { stroke-dashoffset: -22; }
+}
+.path-anim {
+  stroke-dasharray: 6 5;
+  animation: dash-move 1.2s linear infinite;
+}
+
+/* Subtle grid on map */
+.map-grid {
+  background-image:
+    linear-gradient(rgba(103, 232, 249, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(103, 232, 249, 0.05) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-thumb { background: var(--color-hud-border); border-radius: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
