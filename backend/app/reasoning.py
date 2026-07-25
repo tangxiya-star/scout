@@ -8,6 +8,7 @@ back to a deterministic scripted assessment so the demo never breaks.
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 from pathlib import Path
@@ -24,6 +25,36 @@ from .schemas import (
 _DISEASE_PROFILE_PATH = (
     Path(__file__).resolve().parents[2] / "data" / "disease_profile.json"
 )
+
+# Real leaf-level photos live in the frontend's public dir; the reasoning
+# engine reads them straight off disk to attach as image blocks.
+_DISEASE_IMAGE_DIR = (
+    Path(__file__).resolve().parents[2] / "frontend" / "public" / "disease"
+)
+
+
+def _load_image_block(filename: str | None) -> dict[str, Any] | None:
+    """Read a disease photo and wrap it as an Anthropic image content block.
+
+    Returns None if there's no filename or the file can't be read — the caller
+    then falls back to a text-only, detector-numbers assessment.
+    """
+    if not filename:
+        return None
+    path = _DISEASE_IMAGE_DIR / filename
+    try:
+        raw = path.read_bytes()
+    except Exception:
+        return None
+    media = "image/png" if filename.lower().endswith(".png") else "image/jpeg"
+    return {
+        "type": "image",
+        "source": {
+            "type": "base64",
+            "media_type": media,
+            "data": base64.standard_b64encode(raw).decode("ascii"),
+        },
+    }
 
 
 def _load_disease_profile() -> dict[str, Any]:
@@ -47,6 +78,12 @@ intervention may be needed and whether expert review is required.
 - Confidence must reflect the evidence; low-resolution single observations \
 stay uncertain.
 - Choose the mission action that best closes the biggest evidence gap.
+- When a leaf-level photo is attached, ground your visual assessment in what \
+is ACTUALLY visible in the image — symptom morphology, colour, texture, and \
+distribution (e.g. upper-surface oil-spots and lower-surface white sporulation \
+suggest downy mildew; white powdery growth on the upper surface suggests \
+powdery mildew). Treat the numeric detector fields as a preliminary onboard \
+signal to verify against the pixels, not as ground truth.
 """
 
 
@@ -207,19 +244,32 @@ async def run_reasoning(inp: ReasoningInput) -> ReasoningOutput:
             "disease_profile": profile,
         }
 
+        image_block = _load_image_block(inp.visual_observation.image_filename)
+        if image_block is not None:
+            instruction = (
+                "A real close-range leaf photo captured by the drone is "
+                "attached. Assess the crop condition from what you actually see "
+                "in the image, then return the tool output. The numeric fields "
+                "below are a preliminary onboard-detector signal to verify.\n"
+            )
+        else:
+            instruction = "Assess this mission frame and return the tool output.\n"
+
+        # Image first, then the text payload (image-before-text reads best).
+        content: list[dict[str, Any]] = []
+        if image_block is not None:
+            content.append(image_block)
+        content.append(
+            {"type": "text", "text": instruction + json.dumps(user_payload, indent=2)}
+        )
+
         msg = await client.messages.create(
             model=os.environ.get("SCOUT_MODEL", "claude-sonnet-5"),
             max_tokens=1024,
             system=SYSTEM_PROMPT,
             tools=[_TOOL],
             tool_choice={"type": "tool", "name": "emit_assessment"},
-            messages=[
-                {
-                    "role": "user",
-                    "content": "Assess this mission frame and return the tool "
-                    "output.\n" + json.dumps(user_payload, indent=2),
-                }
-            ],
+            messages=[{"role": "user", "content": content}],
         )
 
         tool_use = next(

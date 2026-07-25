@@ -49,6 +49,17 @@ MISSION_PHASES: list[dict[str, Any]] = [
             "current_row": 12,
             "previous_inspections": 0,
         },
+        # Deterministic mission action (state machine). Vision drives *what the
+        # condition is* + evidence; this drives *what the drone does next*, so
+        # the demo storyline always reaches the treatment-zone finale.
+        "scripted_decision": {
+            "action": "FLY_CLOSER",
+            "target_row": 12,
+            "altitude_change_meters": -5,
+            "inspect_adjacent_row": False,
+            "recommend_treatment": False,
+            "treatment_reason": "additional visual confirmation required",
+        },
     },
     {
         "id": "ENV_REASONING",
@@ -74,6 +85,14 @@ MISSION_PHASES: list[dict[str, Any]] = [
             "current_row": 12,
             "previous_inspections": 1,
         },
+        "scripted_decision": {
+            "action": "FLY_CLOSER",
+            "target_row": 12,
+            "altitude_change_meters": -5,
+            "inspect_adjacent_row": True,
+            "recommend_treatment": False,
+            "treatment_reason": "high-risk infection weather noted; visual confirmation still required",
+        },
     },
     {
         "id": "ADAPTIVE_DECISION",
@@ -98,6 +117,16 @@ MISSION_PHASES: list[dict[str, Any]] = [
             "altitude_meters": 18,
             "current_row": 12,
             "previous_inspections": 1,
+            # Drone has descended to leaf level — real photo now drives vision.
+            "image_filename": "downy-mildew-leaf.jpg",
+        },
+        "scripted_decision": {
+            "action": "LOWER_ALTITUDE",
+            "target_row": 12,
+            "altitude_change_meters": -5,
+            "inspect_adjacent_row": True,
+            "recommend_treatment": False,
+            "treatment_reason": "descending for confirmatory close-range imagery",
         },
     },
     {
@@ -123,6 +152,15 @@ MISSION_PHASES: list[dict[str, Any]] = [
             "altitude_meters": 13,
             "current_row": 12,
             "previous_inspections": 2,
+            # Close-range macro of the leaf underside — the verification frame.
+            "image_filename": "downy-mildew-macro.jpg",
+        },
+        "scripted_decision": {
+            "action": "INSPECT_ADJACENT_ROW",
+            "target_row": 12,
+            "inspect_adjacent_row": True,
+            "recommend_treatment": False,
+            "treatment_reason": "consistent symptoms confirmed across nearby plants; scoping the affected extent",
         },
     },
     {
@@ -148,6 +186,17 @@ MISSION_PHASES: list[dict[str, Any]] = [
             "altitude_meters": 13,
             "current_row": 12,
             "previous_inspections": 3,
+            "image_filename": "downy-mildew-macro.jpg",
+        },
+        # Finale: propose a localized zone + human review (never autonomous
+        # treatment). REQUEST_HUMAN_REVIEW is what unlocks the treatment-zone
+        # readout in the UI, so the demo climax is guaranteed here.
+        "scripted_decision": {
+            "action": "REQUEST_HUMAN_REVIEW",
+            "target_row": 12,
+            "inspect_adjacent_row": False,
+            "recommend_treatment": False,
+            "treatment_reason": "localized intervention proposed; agronomist review recommended before any application",
         },
     },
     {

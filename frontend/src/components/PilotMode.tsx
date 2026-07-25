@@ -219,9 +219,9 @@ export default function PilotMode({ onExit }: { onExit: () => void }) {
 
   const fpv =
     state === "INSPECTING"
-      ? { src: "/disease/downy-mildew-leaf.jpg", label: "OIL-SPOT PATTERN", verified: false, credit: "Leaf: Lucyin / Wikimedia · CC BY-SA 4.0" }
+      ? { src: "/disease/grape-cluster-disease.jpg", label: "INFECTED CLUSTER", verified: false, scale: 1, credit: "Erysiphe necator on grape · Wikimedia · CC0" }
       : state === "VERIFIED"
-      ? { src: "/disease/downy-mildew-macro.jpg", label: "VERIFIED · DOWNY MILDEW", verified: true, credit: "Macro: Rude / Wikimedia · CC BY-SA 3.0" }
+      ? { src: "/disease/grape-cluster-disease.jpg", label: "VERIFIED · FUNGAL INFECTION", verified: true, scale: 1.35, credit: "Erysiphe necator on grape · Wikimedia · CC0" }
       : null;
 
   if (failed) {
@@ -261,15 +261,15 @@ export default function PilotMode({ onExit }: { onExit: () => void }) {
             <AnimatePresence>
               {fpv && (
                 <motion.div
-                  key={fpv.src}
-                  initial={{ opacity: 0, scale: 1.15 }}
-                  animate={{ opacity: 1, scale: 1 }}
+                  key={fpv.label}
+                  initial={{ opacity: 0, scale: 1.3 * fpv.scale, filter: "blur(6px)" }}
+                  animate={{ opacity: 1, scale: fpv.scale, filter: "blur(0px)" }}
                   exit={{ opacity: 0 }}
-                  transition={{ duration: 0.9 }}
+                  transition={{ duration: 1.1, ease: [0.4, 0, 0.2, 1] }}
                   className="absolute inset-0 z-10"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={fpv.src} alt="leaf inspection" className="h-full w-full object-cover" />
+                  <img src={fpv.src} alt="cluster inspection" className="h-full w-full object-cover" style={{ objectPosition: "50% 32%" }} />
                   <div className="absolute bottom-2 right-2 z-40 bg-black/55 px-1.5 py-0.5 font-mono text-[9px] text-hud-dim">
                     {fpv.credit}
                   </div>
@@ -279,7 +279,7 @@ export default function PilotMode({ onExit }: { onExit: () => void }) {
 
             {/* view label */}
             <div className="absolute left-3 top-3 z-40 border border-hud-cyan/40 bg-black/70 px-2 py-1 font-mono text-[10px] tracking-widest text-hud-cyan">
-              {fpv ? "◎ FPV · LEAF-LEVEL" : "SAT VIEW · MANUAL"} · ALT {alt} M
+              {fpv ? "◎ FPV · CANOPY-LEVEL" : "SAT VIEW · MANUAL"} · ALT {alt} M
             </div>
 
             {/* crosshair */}

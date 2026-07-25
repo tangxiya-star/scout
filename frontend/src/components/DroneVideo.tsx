@@ -4,58 +4,16 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MissionPhase, Detection } from "@/lib/mission";
 import SatelliteFeed from "@/components/SatelliteFeed";
-
-/**
- * Close-range first-person frames: when the drone drops to leaf level the feed
- * crossfades from satellite to a REAL photo of the disease it flew down to
- * inspect. These are genuine CC-BY-SA plant-pathology images of grapevine
- * downy mildew (Plasmopara viticola), cached in /public so the reveal never
- * depends on a live request. `box` places the detection overlay on the actual
- * symptom; it overrides the satellite-tuned box in the mission data.
- */
-interface FpvFrame {
-  src: string;
-  credit: string;
-  box: Detection["box"];
-  label: string;
-  confidence: number;
-  verified: boolean;
-}
-const FPV_FRAMES: Partial<Record<MissionPhase["id"], FpvFrame>> = {
-  ADAPTIVE_DECISION: {
-    src: "/disease/downy-mildew-leaf.jpg",
-    credit: "Leaf imagery: Lucyin / Wikimedia · CC BY-SA 4.0",
-    box: { x: 34, y: 22, w: 40, h: 50 },
-    label: "OIL-SPOT PATTERN",
-    confidence: 0.68,
-    verified: false,
-  },
-  VERIFICATION: {
-    src: "/disease/downy-mildew-macro.jpg",
-    credit: "Macro: Rude / Wikimedia · CC BY-SA 3.0",
-    box: { x: 30, y: 24, w: 40, h: 46 },
-    label: "VERIFIED · DOWNY MILDEW",
-    confidence: 0.92,
-    verified: true,
-  },
-  LOCALIZED_ACTION: {
-    src: "/disease/downy-mildew-macro.jpg",
-    credit: "Macro: Rude / Wikimedia · CC BY-SA 3.0",
-    box: { x: 30, y: 24, w: 40, h: 46 },
-    label: "VERIFIED · DOWNY MILDEW",
-    confidence: 0.92,
-    verified: true,
-  },
-};
+import DetectionGrid, { countStatuses } from "@/components/DetectionGrid";
 
 /**
  * Drone video area.
  *
- * Wide phases show real satellite imagery of the pilot vineyard (SatelliteFeed);
- * close phases crossfade to a real leaf-level disease photo (FPV_FRAMES). If
+ * Wide phases show real satellite imagery of the pilot vineyard (SatelliteFeed)
+ * with a single region box; close phases zoom the canopy and overlay a per-cell
+ * detection grid (many boxes) that marks every infected/at-risk cell. If
  * satellite tiles can't load (offline venue) the stylized sim takes over, and
- * `videoSrc` still swaps in real drone footage if we ever get some. The
- * detection overlay works identically on every background.
+ * `videoSrc` still swaps in real drone footage if we ever get some.
  */
 export default function DroneVideo({
   phase,
@@ -67,11 +25,11 @@ export default function DroneVideo({
   const closer = phase.videoMode === "closer";
   const [satFailed, setSatFailed] = useState(false);
 
-  // At leaf level, a real disease photo drives both the feed and the box.
-  const fpv = FPV_FRAMES[phase.id];
-  const det: (Detection & { credit?: string }) | null = fpv
-    ? { box: fpv.box, label: fpv.label, confidence: fpv.confidence, verified: fpv.verified }
-    : phase.detection;
+  // Wide phases show a single region box on the aerial view; close phases
+  // switch to the per-cell detection grid (many boxes) over the zoomed canopy.
+  const scanning = closer;
+  const det: Detection | null = scanning ? null : phase.detection;
+  const counts = countStatuses(0);
 
   return (
     <div className="video-fx relative h-full w-full overflow-hidden bg-black">
@@ -98,29 +56,19 @@ export default function DroneVideo({
         </motion.div>
       )}
 
-      {/* --- FPV leaf-level real-imagery layer (crossfades over the feed) --- */}
-      <AnimatePresence>
-        {fpv && (
-          <motion.div
-            key={fpv.src}
-            initial={{ opacity: 0, scale: 1.18 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 1.1, ease: [0.4, 0, 0.2, 1] }}
-            className="absolute inset-0 z-10"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={fpv.src} alt="Drone close-range leaf inspection" className="h-full w-full object-cover" />
-            {/* replaces the SAT VIEW label — we're at leaf level now */}
-            <div className="absolute left-3 top-3 z-40 border border-hud-cyan/40 bg-black/70 px-2 py-1 font-mono text-[10px] tracking-widest text-hud-cyan">
-              ◎ FPV · LEAF-LEVEL INSPECTION · ALT {phase.altitudeM} M
-            </div>
-            <div className="absolute bottom-2 right-2 z-40 bg-black/55 px-1.5 py-0.5 font-mono text-[9px] text-hud-dim">
-              {fpv.credit}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* --- per-cell detection grid over the zoomed canopy (many boxes) --- */}
+      {scanning && (
+        <>
+          <DetectionGrid key={phase.id} />
+          <div className="absolute left-3 top-3 z-40 border border-hud-cyan/40 bg-black/70 px-2 py-1 font-mono text-[10px] tracking-widest text-hud-cyan">
+            ◎ CANOPY SCAN · PER-VINE DETECTION · ALT {phase.altitudeM} M
+          </div>
+          <div className="absolute right-3 top-3 z-40 flex gap-3 border border-hud-border bg-black/70 px-2.5 py-1 font-mono text-[10px]">
+            <span className="text-hud-red">◼ {counts.infected} infected</span>
+            <span className="text-hud-amber">◼ {counts.suspected} at-risk</span>
+          </div>
+        </>
+      )}
 
       {/* --- HUD corners --- */}
       <Corners />

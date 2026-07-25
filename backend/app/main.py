@@ -30,8 +30,10 @@ from .mission_script import MISSION_PHASES, MISSION_REPORT
 from .reasoning import run_reasoning
 from .schemas import (
     Environment,
+    MissionDecision,
     MissionStateIn,
     ReasoningInput,
+    TreatmentStatus,
     VisualObservation,
 )
 
@@ -84,6 +86,7 @@ def _build_reasoning_input(env: dict, ri: dict) -> ReasoningInput:
             confidence=ri["confidence"],
             affected_area_percentage=ri["affected_area_percentage"],
             multiple_plants_detected=ri["multiple_plants_detected"],
+            image_filename=ri.get("image_filename"),
         ),
         environment=Environment(
             temperature_celsius=env["temperature_celsius"],
@@ -151,6 +154,21 @@ async def mission_stream(ws: WebSocket) -> None:
                     _build_reasoning_input(env, phase["reasoning_input"])
                 )
                 reasoning = out.model_dump()
+                # Hybrid: keep the real vision-grounded assessment, but let the
+                # deterministic state machine own the mission action + treatment
+                # status so the demo reliably reaches the treatment-zone finale.
+                sd = phase.get("scripted_decision")
+                if sd is not None:
+                    reasoning["mission_decision"] = MissionDecision(
+                        action=sd["action"],
+                        target_row=sd.get("target_row"),
+                        altitude_change_meters=sd.get("altitude_change_meters"),
+                        inspect_adjacent_row=sd.get("inspect_adjacent_row", False),
+                    ).model_dump()
+                    reasoning["treatment_status"] = TreatmentStatus(
+                        recommend_treatment=sd["recommend_treatment"],
+                        reason=sd["treatment_reason"],
+                    ).model_dump()
 
             await ws.send_json(
                 {

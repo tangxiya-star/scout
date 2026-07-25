@@ -19,6 +19,11 @@ class VisualObservation(BaseModel):
     confidence: float = Field(ge=0, le=1)
     affected_area_percentage: float = 0
     multiple_plants_detected: bool = False
+    # When set, the real leaf-level photo for this frame (a filename under
+    # frontend/public/disease/). If present, the reasoning engine attaches it
+    # as an image block so Claude assesses the disease from actual pixels, not
+    # just the preliminary detector numbers above.
+    image_filename: Optional[str] = None
 
 
 class Environment(BaseModel):

@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { MISSION_REPORT } from "@/lib/mission";
-import FieldMap from "./FieldMap";
+import SpreadForecast from "./SpreadForecast";
 
 const stagger = {
   initial: { opacity: 0, y: 14 },
@@ -78,18 +78,14 @@ export default function MissionComplete({ onRestart }: { onRestart: () => void }
         />
       </div>
 
-      {/* map + recommendation */}
-      <div className="grid min-h-0 flex-1 grid-cols-[1.4fr_1fr] gap-3">
-        <motion.div variants={stagger} initial="initial" animate="animate" custom={5} className="panel min-h-[220px] overflow-hidden">
-          <FieldMap
-            report
-            progressPct={100}
-            zones={{ anomaly: true, inspection: true, treatment: true }}
-          />
+      {/* spread forecast (prediction layer) + recommendation */}
+      <div className="grid min-h-0 flex-1 grid-cols-[1.5fr_1fr] gap-3">
+        <motion.div variants={stagger} initial="initial" animate="animate" custom={5} className="panel min-h-[240px] px-3 py-3">
+          <SpreadForecast />
         </motion.div>
 
         <motion.div variants={stagger} initial="initial" animate="animate" custom={6} className="panel flex flex-col px-4 py-3">
-          <div className="hud-label mb-2">Recommendation</div>
+          <div className="hud-label mb-2">Standing Recommendation</div>
           <ul className="space-y-2.5">
             {r.recommendations.map((rec, i) => (
               <li key={rec} className="flex gap-2 text-sm">
@@ -101,7 +97,7 @@ export default function MissionComplete({ onRestart }: { onRestart: () => void }
             ))}
           </ul>
           <div className="mt-auto pt-3 text-[11px] leading-relaxed text-hud-dim">
-            Scout recommends <em>whether</em> intervention may be needed and <em>where</em> —
+            Scout recommends <em>whether</em> intervention may be needed, <em>where</em>, and <em>by when</em> —
             not chemical products or doses. Final treatment decisions require professional review.
           </div>
         </motion.div>
