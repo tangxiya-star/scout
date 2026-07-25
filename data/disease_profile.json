@@ -1,0 +1,160 @@
+{
+  "_meta": {
+    "schema_version": "0.1.0-draft",
+    "owner_structure": "Holly (matches reasoning engine input, PRD §13/§16)",
+    "owner_science": "Riyan (fills + validates every field marked _TODO_RIYAN)",
+    "note": "This is the interface between the two halves of Scout. If the structure changes, ping the other person first. Riyan: replace placeholder science, keep the keys.",
+    "last_updated": "2026-07-24"
+  },
+
+  "crop": "grapevine",
+  "condition": "downy_mildew",
+  "condition_display_name": "Grapevine Downy Mildew (Plasmopara viticola)",
+  "_TODO_RIYAN_condition": "Confirm downy vs powdery mildew as the locked demo disease; adjust display name + pathogen.",
+
+  "visual_indicators": [
+    {
+      "name": "oil-spot lesions on upper leaf surface",
+      "importance": "essential",
+      "drone_observable": true,
+      "notes": "_TODO_RIYAN: confirm this is the primary early drone-visible symptom"
+    },
+    {
+      "name": "white downy sporulation on leaf underside",
+      "importance": "essential",
+      "drone_observable": false,
+      "notes": "_TODO_RIYAN: underside — likely needs closer/angled inspection, flag as high-value close-up target"
+    },
+    {
+      "name": "localized leaf discoloration / yellowing",
+      "importance": "supporting",
+      "drone_observable": true
+    },
+    {
+      "name": "multiple nearby plants affected",
+      "importance": "essential",
+      "drone_observable": true,
+      "notes": "spatial clustering strongly raises disease probability vs isolated stress"
+    },
+    {
+      "name": "leaf curling / necrosis (advanced)",
+      "importance": "supporting",
+      "drone_observable": true
+    }
+  ],
+  "_TODO_RIYAN_visual": "Provide the 5 most important visual indicators, ranked, with importance ∈ {essential, supporting, weak, exclusion}.",
+
+  "environmental_indicators": [
+    {
+      "name": "relative_humidity",
+      "importance": "essential",
+      "risk_threshold": { "operator": ">=", "value": 85, "unit": "%" },
+      "notes": "_TODO_RIYAN: confirm threshold for infection risk"
+    },
+    {
+      "name": "temperature",
+      "importance": "essential",
+      "risk_range": { "min": 18, "max": 30, "unit": "celsius" },
+      "notes": "_TODO_RIYAN: confirm optimal infection temperature band"
+    },
+    {
+      "name": "recent_rainfall",
+      "importance": "essential",
+      "risk_threshold": { "operator": ">=", "value": 10, "unit": "mm_24h" },
+      "notes": "_TODO_RIYAN: leaf wetness duration is the real driver — confirm proxy"
+    },
+    {
+      "name": "leaf_wetness_hours",
+      "importance": "supporting",
+      "risk_threshold": { "operator": ">=", "value": 4, "unit": "hours" }
+    },
+    {
+      "name": "soil_moisture",
+      "importance": "supporting",
+      "notes": "regional context only (SMAP/Crop-CASMA resolution), not plant-level"
+    }
+  ],
+  "_TODO_RIYAN_env": "Provide the 5 most important environmental indicators with thresholds/ranges and importance classification.",
+
+  "possible_lookalikes": [
+    { "name": "nutrient deficiency (magnesium/potassium)", "how_to_distinguish": "_TODO_RIYAN" },
+    { "name": "water stress", "how_to_distinguish": "_TODO_RIYAN" },
+    { "name": "powdery mildew", "how_to_distinguish": "_TODO_RIYAN" },
+    { "name": "spray residue / dust", "how_to_distinguish": "_TODO_RIYAN" },
+    { "name": "sunburn / heat scorch", "how_to_distinguish": "_TODO_RIYAN" }
+  ],
+
+  "additional_evidence": [
+    "closer leaf image at lower altitude",
+    "underside leaf inspection (angled capture)",
+    "adjacent plant inspection",
+    "symptom distribution / clustering analysis"
+  ],
+
+  "decision_tree": {
+    "_TODO_RIYAN_thresholds": "Confirm the confidence + evidence thresholds that move Scout between states.",
+    "monitor": {
+      "when": [
+        "confidence < 0.55",
+        "only one isolated plant affected",
+        "environmental risk not elevated"
+      ]
+    },
+    "inspect_further": {
+      "when": [
+        "0.55 <= confidence < 0.85",
+        "multiple possible causes remain",
+        "image resolution insufficient",
+        "adjacent plants not yet checked"
+      ],
+      "actions": ["FLY_CLOSER", "LOWER_ALTITUDE", "INSPECT_ADJACENT_ROW"]
+    },
+    "consider_non_chemical": {
+      "when": [
+        "early/low severity",
+        "manageable via pruning / canopy management / biological control"
+      ],
+      "options": ["_TODO_RIYAN: biological / cultural options for downy mildew"]
+    },
+    "define_treatment_zone": {
+      "when": [
+        "confidence >= 0.85",
+        "multiple nearby plants with consistent symptoms",
+        "environmental risk elevated",
+        "affected area can be clearly bounded"
+      ]
+    },
+    "request_agronomist_review": {
+      "when": [
+        "severe / widespread",
+        "diagnosis uncertain but risk high",
+        "chemical treatment may carry meaningful risk"
+      ]
+    }
+  },
+
+  "low_pesticide_strategy": {
+    "buffer_zone_meters": null,
+    "_TODO_RIYAN_buffer": "How wide a buffer around confirmed plants? Rationale.",
+    "avoid_spray_when": [
+      "_TODO_RIYAN: e.g. wind speed above threshold (drift), imminent rain, pollinator activity"
+    ],
+    "biological_alternatives": ["_TODO_RIYAN"]
+  },
+
+  "safety_constraints": {
+    "no_exact_dose": true,
+    "recommend_scope": "whether intervention may be needed, which region, whether expert review is required",
+    "coverage_metric_label": "estimated reduction in treated field coverage",
+    "coverage_formula": "1 - (recommended_treatment_area / baseline_treatment_area)",
+    "professional_review_required_when": [
+      "any chemical intervention",
+      "diagnosis uncertainty above tolerance",
+      "regulatory / jurisdiction-specific guidance needed"
+    ]
+  },
+
+  "sources": [
+    "_TODO_RIYAN: cite agricultural extension / research sources used"
+  ]
+}
