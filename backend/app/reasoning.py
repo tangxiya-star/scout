@@ -108,65 +108,86 @@ def _fallback(inp: ReasoningInput) -> ReasoningOutput:
     )
 
 
-# Anthropic tool schema — forces structured output (no prose parsing).
+# Anthropic tool schema — FLAT on purpose. A deeply nested schema makes some
+# models serialize the whole object into one string field; a flat schema is
+# filled reliably. We reconstruct the nested ReasoningOutput from the flat dict.
 _TOOL = {
     "name": "emit_assessment",
-    "description": "Return Scout's structured mission assessment.",
+    "description": "Return Scout's structured mission assessment as flat fields.",
     "input_schema": {
         "type": "object",
         "properties": {
-            "assessment": {
-                "type": "object",
-                "properties": {
-                    "possible_condition": {"type": "string"},
-                    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-                    "supporting_evidence": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                    },
-                    "uncertainties": {"type": "array", "items": {"type": "string"}},
-                },
-                "required": [
-                    "possible_condition",
-                    "confidence",
-                    "supporting_evidence",
-                    "uncertainties",
+            "possible_condition": {
+                "type": "string",
+                "description": "Most plausible condition, hedged appropriately.",
+            },
+            "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+            "supporting_evidence": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Short evidence phrases.",
+            },
+            "uncertainties": {
+                "type": "array",
+                "items": {"type": "string"},
+            },
+            "action": {
+                "type": "string",
+                "enum": [
+                    "CONTINUE_ROUTE",
+                    "FLY_CLOSER",
+                    "LOWER_ALTITUDE",
+                    "INSPECT_ADJACENT_ROW",
+                    "REVISIT_LOCATION",
+                    "EXPAND_SEARCH_AREA",
+                    "REQUEST_HUMAN_REVIEW",
+                    "COMPLETE_MISSION",
                 ],
+                "description": "The next mission action.",
             },
-            "mission_decision": {
-                "type": "object",
-                "properties": {
-                    "action": {
-                        "type": "string",
-                        "enum": [
-                            "CONTINUE_ROUTE",
-                            "FLY_CLOSER",
-                            "LOWER_ALTITUDE",
-                            "INSPECT_ADJACENT_ROW",
-                            "REVISIT_LOCATION",
-                            "EXPAND_SEARCH_AREA",
-                            "REQUEST_HUMAN_REVIEW",
-                            "COMPLETE_MISSION",
-                        ],
-                    },
-                    "target_row": {"type": "integer"},
-                    "altitude_change_meters": {"type": "number"},
-                    "inspect_adjacent_row": {"type": "boolean"},
-                },
-                "required": ["action"],
+            "target_row": {"type": "integer"},
+            "altitude_change_meters": {
+                "type": "number",
+                "description": "Negative = descend, e.g. -5.",
             },
-            "treatment_status": {
-                "type": "object",
-                "properties": {
-                    "recommend_treatment": {"type": "boolean"},
-                    "reason": {"type": "string"},
-                },
-                "required": ["recommend_treatment", "reason"],
-            },
+            "inspect_adjacent_row": {"type": "boolean"},
+            "recommend_treatment": {"type": "boolean"},
+            "treatment_reason": {"type": "string"},
         },
-        "required": ["assessment", "mission_decision", "treatment_status"],
+        "required": [
+            "possible_condition",
+            "confidence",
+            "supporting_evidence",
+            "uncertainties",
+            "action",
+            "recommend_treatment",
+            "treatment_reason",
+        ],
     },
 }
+
+
+def _reasoning_from_flat(flat: dict[str, Any]) -> ReasoningOutput:
+    """Reconstruct the nested §13 output from the flat tool payload."""
+    return ReasoningOutput(
+        assessment=Assessment(
+            possible_condition=flat["possible_condition"],
+            confidence=flat["confidence"],
+            supporting_evidence=flat.get("supporting_evidence", []),
+            uncertainties=flat.get("uncertainties", []),
+        ),
+        mission_decision=MissionDecision(
+            action=flat["action"],
+            target_row=flat.get("target_row"),
+            altitude_change_meters=flat.get("altitude_change_meters"),
+            inspect_adjacent_row=flat.get("inspect_adjacent_row", False),
+        ),
+        treatment_status=TreatmentStatus(
+            recommend_treatment=flat["recommend_treatment"],
+            reason=flat["treatment_reason"],
+        ),
+        source="claude",
+    )
 
 
 async def run_reasoning(inp: ReasoningInput) -> ReasoningOutput:
@@ -207,9 +228,6 @@ async def run_reasoning(inp: ReasoningInput) -> ReasoningOutput:
         if tool_use is None:
             return _fallback(inp)
 
-        out = ReasoningOutput.model_validate(
-            {**tool_use.input, "source": "claude"}
-        )
-        return out
+        return _reasoning_from_flat(dict(tool_use.input))
     except Exception:
         return _fallback(inp)
