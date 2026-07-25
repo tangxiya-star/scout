@@ -34,6 +34,10 @@ export default function GlobeView({ onEnterMission }: { onEnterMission: () => vo
 
     let map: maplibregl.Map;
     try {
+      // Turbopack mangles MapLibre's own worker URL (it resolves to the page
+      // root and every GeoJSON source silently stays empty). Serve the stock
+      // worker from /public instead. Files copied from maplibre-gl/dist.
+      maplibregl.setWorkerUrl("/maplibre-gl-worker.mjs");
       map = new maplibregl.Map({
         container: containerRef.current,
         center: [-100, 30],
@@ -116,6 +120,8 @@ export default function GlobeView({ onEnterMission }: { onEnterMission: () => vo
       return;
     }
     mapRef.current = map;
+    // debug handle for the browser console / demo-day troubleshooting
+    (window as unknown as Record<string, unknown>).__scoutMap = map;
 
     // Pulsing DOM marker for the Scout-enabled pilot farm.
     const el = document.createElement("div");
@@ -212,7 +218,9 @@ export default function GlobeView({ onEnterMission }: { onEnterMission: () => vo
 
   return (
     <div className="relative h-full w-full overflow-hidden">
-      <div ref={containerRef} className="absolute inset-0" />
+      {/* NOTE: maplibre.css forces `.maplibregl-map { position: relative }`, so
+          absolute-positioning classes get overridden — size it explicitly. */}
+      <div ref={containerRef} className="h-full w-full" />
 
       {/* header */}
       <div className="pointer-events-none absolute left-4 top-3 z-10">
