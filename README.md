@@ -53,6 +53,14 @@ The live demo never blocks on a slow or failing external call:
 - The pesticide metric is labeled **"estimated reduction in treated field coverage"** (`1 − recommended_area / baseline_area`) — never "88% less pesticide."
 - The pipeline distinguishes states: observation vs. suspected vs. verified vs. treatment-consideration vs. professional-recommendation.
 
+## Sponsor track
+
+Scout is built on the hackathon **sponsor track**:
+
+- **Hexclave** — used for real. Auth (`@hexclave/next`, sign-up enabled) and one-click deploy to Vercel are wired through `frontend/hexclave.config.ts`, taking the prototype from hackathon build toward a hostable, production-ready product — and pointing at Hexclave's "make money during the hackathon" prize via a deployable path to paying farmers.
+- **NASA open data** — the environmental reasoning layer runs on **NASA POWER** (agroclimate: temperature, humidity, rainfall) alongside Open-Meteo, so disease-risk reasoning is grounded in real space/earth-observation data.
+- **Customer discovery** — sponsor-track intros are the channel for reaching US farmers who already fly drones (Riyan's discovery work).
+
 ---
 
 ## Run it
