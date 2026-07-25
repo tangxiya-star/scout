@@ -22,14 +22,15 @@ import { PILOT_FARM } from "@/lib/globe";
 import TelemetryBar from "@/components/TelemetryBar";
 import ReasoningPanel from "@/components/ReasoningPanel";
 import StatsBar from "@/components/StatsBar";
+import MissionComplete from "@/components/MissionComplete";
 
 const ESRI =
   "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
 
-/** Hidden diseased block — the pilot has to find it. */
-const ANOMALY = { lng: PILOT_FARM.lng + 0.0032, lat: PILOT_FARM.lat - 0.0006 };
-/** Drone spawns up-field so there is somewhere to fly from. */
-const START = { lng: PILOT_FARM.lng - 0.0025, lat: PILOT_FARM.lat + 0.0016, zoom: 16.4, bearing: -18 };
+/** Diseased block — flagged by a beacon so the pilot can steer to it. */
+const ANOMALY = { lng: PILOT_FARM.lng + 0.0016, lat: PILOT_FARM.lat - 0.0004 };
+/** Drone spawns up-field so there is a short flight to the target. */
+const START = { lng: PILOT_FARM.lng - 0.0016, lat: PILOT_FARM.lat + 0.0012, zoom: 16.6, bearing: -18 };
 
 const ZOOM_MIN = 15.5; // highest altitude
 const ZOOM_MAX = 18.6; // lowest altitude (leaf level)
@@ -58,9 +59,21 @@ export default function PilotMode({ onExit }: { onExit: () => void }) {
   const stateRef = useRef<PilotState>("PATROL");
   const [state, setState] = useState<PilotState>("PATROL");
   const [signal, setSignal] = useState(0); // 0..1 proximity to anomaly
+  const [nav, setNav] = useState({ dist: 0, angle: 0, onScreen: false });
+  const markerRef = useRef<maplibregl.Marker | null>(null);
   const [alt, setAlt] = useState(zoomToAlt(START.zoom));
   const [elapsed, setElapsed] = useState(0);
   const [failed, setFailed] = useState(false);
+  const [report, setReport] = useState(false);
+
+  // Reset the flight so the pilot can fly again from the report screen.
+  const flyAgain = () => {
+    stateRef.current = "PATROL";
+    setState("PATROL");
+    setSignal(0);
+    setElapsed(0);
+    setReport(false);
+  };
 
   // Map + control loop.
   useEffect(() => {
@@ -95,13 +108,20 @@ export default function PilotMode({ onExit }: { onExit: () => void }) {
       if (e.error?.message?.includes("Failed to fetch") || e.error?.name === "AJAXError") setFailed(true);
     });
 
+    // Beacon over the diseased block so the pilot can actually find it.
+    const beacon = document.createElement("div");
+    beacon.className = "target-beacon";
+    beacon.innerHTML = `<div class="target-ring"></div><div class="target-core"></div><div class="target-label">◎ INVESTIGATE</div>`;
+    markerRef.current = new maplibregl.Marker({ element: beacon }).setLngLat([ANOMALY.lng, ANOMALY.lat]).addTo(map);
+
     let raf = 0;
+    let frame = 0;
     let last = performance.now();
     const tick = (now: number) => {
       const dt = Math.min(50, now - last) / 16.67; // frames elapsed (~1 at 60fps)
       last = now;
       const k = keys.current;
-      const pan = 6 * dt; // screen px/frame — zoom-independent via panBy
+      const pan = 10 * dt; // screen px/frame — zoom-independent via panBy
       let dx = 0;
       let dy = 0;
       if (k.has("w")) dy -= pan;
@@ -109,17 +129,29 @@ export default function PilotMode({ onExit }: { onExit: () => void }) {
       if (k.has("a")) dx -= pan;
       if (k.has("d")) dx += pan;
       if (dx || dy) map.panBy([dx, dy], { duration: 0 });
-      if (k.has("q")) map.setBearing(map.getBearing() - 1.6 * dt);
-      if (k.has("e")) map.setBearing(map.getBearing() + 1.6 * dt);
-      if (k.has("r")) map.setZoom(Math.min(ZOOM_MAX, map.getZoom() + 0.02 * dt)); // descend
-      if (k.has("f")) map.setZoom(Math.max(ZOOM_MIN, map.getZoom() - 0.02 * dt)); // ascend
+      if (k.has("q")) map.setBearing(map.getBearing() - 1.8 * dt);
+      if (k.has("e")) map.setBearing(map.getBearing() + 1.8 * dt);
+      if (k.has("r")) map.setZoom(Math.min(ZOOM_MAX, map.getZoom() + 0.022 * dt)); // descend
+      if (k.has("f")) map.setZoom(Math.max(ZOOM_MIN, map.getZoom() - 0.022 * dt)); // ascend
 
       // Discovery logic.
       const c = map.getCenter();
       const z = map.getZoom();
       const d = metres(c.lng, c.lat, ANOMALY.lng, ANOMALY.lat);
-      setSignal(Math.max(0, Math.min(1, 1 - d / 140)));
-      setAlt(zoomToAlt(z));
+
+      // Throttle HUD state to ~12 Hz to keep re-renders cheap.
+      if (++frame % 5 === 0) {
+        setSignal(Math.max(0, Math.min(1, 1 - d / 200)));
+        setAlt(zoomToAlt(z));
+        const brng = (Math.atan2((ANOMALY.lng - c.lng) * Math.cos((c.lat * Math.PI) / 180), ANOMALY.lat - c.lat) * 180) / Math.PI;
+        const cont = map.getContainer();
+        const p = map.project([ANOMALY.lng, ANOMALY.lat]);
+        setNav({
+          dist: d,
+          angle: brng - map.getBearing(),
+          onScreen: p.x >= 0 && p.y >= 0 && p.x <= cont.clientWidth && p.y <= cont.clientHeight,
+        });
+      }
 
       const s = stateRef.current;
       let next: PilotState = s;
@@ -168,6 +200,12 @@ export default function PilotMode({ onExit }: { onExit: () => void }) {
     return () => clearInterval(t);
   }, []);
 
+  // Beacon guides the pilot in; fade it once they are inspecting the target.
+  useEffect(() => {
+    const el = markerRef.current?.getElement();
+    if (el) el.style.opacity = state === "INSPECTING" || state === "VERIFIED" ? "0" : "1";
+  }, [state]);
+
   // Synthesize a MissionPhase for the reused panels.
   const phaseId: MissionPhase["id"] =
     state === "PATROL"
@@ -193,6 +231,17 @@ export default function PilotMode({ onExit }: { onExit: () => void }) {
         <button onClick={onExit} className="cursor-pointer rounded-sm border border-hud-border px-4 py-2 font-mono text-xs text-hud-dim hover:text-hud-text">
           ← BACK
         </button>
+      </div>
+    );
+  }
+
+  if (report) {
+    return (
+      <div className="flex h-full flex-col">
+        <TelemetryBar phase={byId.MISSION_COMPLETE} clock={elapsed} />
+        <div className="min-h-0 flex-1">
+          <MissionComplete onRestart={flyAgain} />
+        </div>
       </div>
     );
   }
@@ -270,11 +319,11 @@ export default function PilotMode({ onExit }: { onExit: () => void }) {
               )}
             </AnimatePresence>
 
-            {/* objective + signal meter */}
+            {/* objective + signal meter + waypoint guidance */}
             <div className="absolute left-3 top-14 z-40 w-64 rounded-sm border border-hud-border bg-black/60 p-2.5">
               <div className="hud-label mb-1">
                 {state === "PATROL"
-                  ? "Objective — patrol Block C"
+                  ? "Objective — fly to the flagged block"
                   : state === "SPOTTED"
                   ? "Anomaly found — descend (R) to inspect"
                   : state === "INSPECTING"
@@ -293,9 +342,19 @@ export default function PilotMode({ onExit }: { onExit: () => void }) {
                   />
                 </div>
               </div>
-              {state === "PATROL" && (
-                <div className="font-mono text-[10px] leading-relaxed text-hud-dim">
-                  Fly the rows. Something on Block C looks off — find it.
+              {(state === "PATROL" || state === "SPOTTED") && (
+                <div className="flex items-center gap-2 font-mono text-[10px] text-hud-dim">
+                  <span
+                    className="inline-block text-sm text-hud-amber"
+                    style={{ transform: `rotate(${nav.angle}deg)` }}
+                    aria-hidden
+                  >
+                    ↑
+                  </span>
+                  <span>
+                    ◎ TARGET · {Math.round(nav.dist)} m
+                    {!nav.onScreen && <span className="text-hud-amber"> · follow the arrow</span>}
+                  </span>
                 </div>
               )}
             </div>
@@ -308,16 +367,22 @@ export default function PilotMode({ onExit }: { onExit: () => void }) {
               <span><span className="text-hud-text">F</span> ascend</span>
             </div>
 
-            {/* verified banner */}
+            {/* verified banner + treatment-zone CTA */}
             <AnimatePresence>
               {state === "VERIFIED" && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="absolute bottom-14 left-1/2 z-40 -translate-x-1/2 rounded-sm border border-hud-red/50 bg-black/75 px-4 py-2 text-center"
+                  className="absolute bottom-14 left-1/2 z-40 flex -translate-x-1/2 flex-col items-center gap-2 rounded-sm border border-hud-red/50 bg-black/80 px-5 py-3 text-center"
                 >
                   <div className="font-mono text-sm font-bold tracking-widest text-hud-red">DOWNY MILDEW CONFIRMED</div>
-                  <div className="mt-0.5 font-mono text-[10px] text-hud-dim">You flew the drone to the problem and Scout verified it.</div>
+                  <div className="font-mono text-[10px] text-hud-dim">You flew the drone to the problem and Scout verified it.</div>
+                  <button
+                    onClick={() => setReport(true)}
+                    className="mt-1 cursor-pointer rounded-sm border border-hud-green/60 bg-hud-green/15 px-4 py-2 font-mono text-xs font-bold tracking-widest text-hud-green transition-colors hover:bg-hud-green/25"
+                  >
+                    ◹ GENERATE TREATMENT ZONE →
+                  </button>
                 </motion.div>
               )}
             </AnimatePresence>
